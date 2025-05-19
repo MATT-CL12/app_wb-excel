@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Estudiantes</title></head>
+<body>
+  <h2>Estudiantes</h2>
+  <ul>
+    {% for est in estudiantes %}
+      <li><a href="/estudiante/{{ est['ID'] }}">{{ est['Nombre'] }}</a></li>
+    {% endfor %}
+  </ul>
+  <a href="/home">Volver</a>
+</body>
+</html>

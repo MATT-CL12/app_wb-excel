@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Materias</title></head>
+<body>
+  <h2>Lista de Materias</h2>
+  <ul>
+    {% for materia in materias %}
+      <li><a href="/materia/{{ materia['ID'] }}">{{ materia['Nombre'] }}</a></li>
+    {% endfor %}
+  </ul>
+  <a href="/home">Volver</a>
+</body>
+</html>

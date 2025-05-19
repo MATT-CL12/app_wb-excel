@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>Estudiante</title></head>
+<body>
+  <h2>Estudiante: {{ estudiante.Nombre }}</h2>
+  <form method="POST">
+    <table>
+      <tr><th>Materia</th><th>Nota</th></tr>
+      {% for n in info %}
+        <tr>
+          <td>{{ n.Materia }}</td>
+          <td>
+            <input type="number" step="0.1" name="nota_{{ n.MateriaID }}" value="{{ n.Nota }}">
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+    <button type="submit">Guardar Cambios</button>
+  </form>
+  <a href="/home">Volver</a>
+</body>
+</html>

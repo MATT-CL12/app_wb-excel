@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Grupos</title></head>
+<body>
+  <h2>Lista de Grupos</h2>
+  <ul>
+    {% for grupo in grupos %}
+      <li><a href="/grupo/{{ grupo['ID'] }}">{{ grupo['Nombre'] }}</a></li>
+    {% endfor %}
+  </ul>
+  <a href="/home">Volver</a>
+</body>
+</html>
