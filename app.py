@@ -8,28 +8,21 @@ st.set_page_config(layout="wide") # Configura el layout de la página para usar 
 
 # --- Funciones de Utilidad ---
 
-# Función para cargar datos o crear DataFrame vacío con datos de ejemplo
+# Función para cargar datos o crear DataFrame vacío
 def cargar_datos():
     if os.path.exists(ARCHIVO_EXCEL):
+        # Si el archivo existe, simplemente lo carga
         return pd.read_excel(ARCHIVO_EXCEL)
     else:
-        # Si el archivo no existe, crea un DataFrame con datos de ejemplo
-        data_ejemplo = {
-            "ID": [1, 2, 3, 4, 5],
-            "Nombre": ["Ana García", "Carlos Ruíz", "Sofía López", "Diego Pérez", "Elena Castro"],
-            "Email": ["ana.garcia@example.com", "carlos.ruiz@example.com", "sofia.lopez@example.com", "diego.perez@example.com", "elena.castro@example.com"],
-            "Teléfono": ["123456789", "987654321", "555123456", "777888999", "333222111"],
-            "Grupo": ["Grupo A", "Grupo B", "Grupo A", "Grupo C", "Grupo B"]
-        }
-        df_ejemplo = pd.DataFrame(data_ejemplo)
-        df_ejemplo.to_excel(ARCHIVO_EXCEL, index=False) # Guarda los datos de ejemplo
-        return df_ejemplo
+        # Si el archivo NO existe, devuelve un DataFrame vacío
+        st.warning(f"El archivo '{ARCHIVO_EXCEL}' no fue encontrado. Se iniciará con una base de datos vacía.")
+        return pd.DataFrame(columns=["ID", "Nombre", "Email", "Teléfono", "Grupo"])
 
 # Función para guardar datos
 def guardar_datos(df):
     df.to_excel(ARCHIVO_EXCEL, index=False)
 
-# Cargar datos existentes o crear el archivo de ejemplo
+# Cargar datos existentes o iniciar con un DataFrame vacío
 df = cargar_datos()
 
 st.title("📚 Gestión de Estudiantes y Grupos")
@@ -39,8 +32,8 @@ st.markdown("---")
 st.header("➕ Agrega o Modifica Estudiantes")
 
 # Obtener IDs y grupos existentes para las opciones
-ids_existentes = ["0 (Nuevo Estudiante)"] + df["ID"].astype(str).tolist()
-grupos_existentes = df["Grupo"].unique().tolist()
+ids_existentes = ["0 (Nuevo Estudiante)"] + df["ID"].astype(str).tolist() if not df.empty else ["0 (Nuevo Estudiante)"]
+grupos_existentes = df["Grupo"].unique().tolist() if not df.empty else []
 grupos_existentes.sort() # Ordenar los grupos alfabéticamente
 
 with st.form("form_estudiante", clear_on_submit=True):
@@ -61,30 +54,20 @@ with st.form("form_estudiante", clear_on_submit=True):
 
         nombre_precargado = datos_estudiante.get("Nombre", "")
         email_precargado = datos_estudiante.get("Email", "")
-        telefono_precargado = datos_estudiante.get("Teléfono", "")
-        grupo_precargado = datos_estudiante.get("Grupo", "")
 
         nombre = st.text_input("Nombre", value=nombre_precargado)
         email = st.text_input("Email", value=email_precargado)
 
     with col2:
+        telefono_precargado = datos_estudiante.get("Teléfono", "")
+        grupo_precargado = datos_estudiante.get("Grupo", "")
+
         telefono = st.text_input("Teléfono", value=telefono_precargado)
 
         # Input de grupo con autocompletado y opción de escribir nuevo
         grupo_input = st.text_input("Grupo", value=grupo_precargado, help="Selecciona un grupo existente o escribe uno nuevo.")
         if grupo_input and grupo_input not in grupos_existentes and len(grupos_existentes) > 0:
             st.warning(f"El grupo '{grupo_input}' es nuevo y se agregará al sistema.")
-        
-        # Opcional: un selectbox para elegir de los existentes, si se prefiere
-        # if len(grupos_existentes) > 0:
-        #     opciones_grupo = ["(Escribir nuevo)"] + grupos_existentes
-        #     grupo_seleccionado_sb = st.selectbox("O selecciona un grupo existente:", options=opciones_grupo, index=opciones_grupo.index(grupo_precargado) if grupo_precargado in opciones_grupo else 0)
-        #     if grupo_seleccionado_sb != "(Escribir nuevo)":
-        #         grupo = grupo_seleccionado_sb
-        #     else:
-        #         grupo = st.text_input("Escribe el nombre del grupo:")
-        # else:
-        #     grupo = st.text_input("Escribe el nombre del grupo:")
         
         grupo = grupo_input # Usamos el valor del text_input como el grupo final
 
@@ -94,6 +77,7 @@ if enviar_button:
     if nombre and email and telefono and grupo:
         if id_modificar == 0:
             # Agregar nuevo estudiante
+            # Si el DataFrame está vacío, el primer ID será 1, de lo contrario, será el máximo ID + 1
             nuevo_id = df["ID"].max() + 1 if not df.empty else 1
             nuevo_registro = {
                 "ID": nuevo_id,
@@ -106,12 +90,16 @@ if enviar_button:
             df = pd.concat([df, pd.DataFrame([nuevo_registro])], ignore_index=True)
             guardar_datos(df)
             st.success(f"✅ ¡Estudiante '{nombre}' agregado con ID {nuevo_id}!")
+            # Recargar la página para actualizar el selectbox de IDs y grupos
+            st.rerun() 
         else:
             # Modificar estudiante existente
             if id_modificar in df["ID"].values:
                 df.loc[df["ID"] == id_modificar, ["Nombre", "Email", "Teléfono", "Grupo"]] = [nombre, email, telefono, grupo]
                 guardar_datos(df)
                 st.success(f"✏️ ¡Estudiante con ID {id_modificar} modificado con éxito!")
+                # Recargar la página para actualizar el selectbox de IDs y grupos
+                st.rerun()
             else:
                 st.error(f"❌ Error: No existe estudiante con ID {id_modificar} para modificar.")
     else:
@@ -124,14 +112,20 @@ st.header("🗑️ Eliminar Estudiante")
 
 with st.form("form_eliminar_estudiante"):
     st.write("Ingresa el ID del estudiante que deseas eliminar.")
-    id_eliminar = st.number_input("ID del estudiante a eliminar", min_value=1, step=1, value=1)
+    # Asegúrate de que el valor por defecto sea válido si el df está vacío
+    default_id_eliminar = 1 if not df.empty else 0 
+    id_eliminar = st.number_input("ID del estudiante a eliminar", min_value=0, step=1, value=default_id_eliminar)
     confirmar_eliminar = st.form_submit_button("🚫 Eliminar Estudiante")
 
 if confirmar_eliminar:
-    if id_eliminar in df["ID"].values:
+    if id_eliminar == 0:
+        st.error("❌ Por favor, ingresa un ID válido (mayor que 0) para eliminar.")
+    elif id_eliminar in df["ID"].values:
         df = df[df["ID"] != id_eliminar]
         guardar_datos(df)
         st.success(f"🗑️ ¡Estudiante con ID {id_eliminar} eliminado con éxito!")
+        # Recargar la página para actualizar las tablas y selectboxes
+        st.rerun() 
     else:
         st.error(f"❌ Error: No se encontró un estudiante con ID {id_eliminar}.")
 
